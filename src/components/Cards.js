@@ -1,12 +1,15 @@
 import React from "react";
 import { Card, Row } from "antd";
+import CreateBudgetModal from "./Modals/CreateBudget";
 
 function Cards({
   currentBalance,
   income,
   expenses,
+  budget,
   showExpenseModal,
   showIncomeModal,
+  showBudgetModal,
   cardStyle,
   reset,
 }) {
@@ -44,6 +47,13 @@ function Cards({
         <p>₹{expenses}</p>
         <div className="btn btn-blue" onClick={showExpenseModal}>
           Add Expense
+        </div>
+      </Card>
+      <Card bordered={true} style={cardStyle}>
+        <h2>Your Budget</h2>
+        <p>₹{budget}</p>
+        <div className="btn btn-blue" onClick={showBudgetModal}> 
+          Create Budget
         </div>
       </Card>
     </Row>

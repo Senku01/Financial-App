@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { Card, Row } from "antd";
+import { Card, Row, Button } from "antd";
 import { Line, Pie } from "@ant-design/charts";
 import moment from "moment";
 import TransactionSearch from "./TransactionSearch";
 import Header from "./Header";
 import AddIncomeModal from "./Modals/AddIncome";
 import AddExpenseModal from "./Modals/AddExpense";
+import CreateBudgetModal from "./Modals/CreateBudget"; // Import the new modal
 import Cards from "./Cards";
 import NoTransactions from "./NoTransactions";
 import { useAuthState } from "react-firebase-hooks/auth";
@@ -19,36 +20,16 @@ import { unparse } from "papaparse";
 const Dashboard = () => {
   const [user] = useAuthState(auth);
 
-  // const sampleTransactions = [
-  // {
-  //   name: "Pay day",
-  //   type: "income",
-  //   date: "2023-01-15",
-  //   amount: 2000,
-  //   tag: "salary",
-  // },
-  // {
-  //   name: "Dinner",
-  //   type: "expense",
-  //   date: "2023-01-20",
-  //   amount: 500,
-  //   tag: "food",
-  // },
-  // {
-  //   name: "Books",
-  //   type: "expense",
-  //   date: "2023-01-25",
-  //   amount: 300,
-  //   tag: "education",
-  // },
-  // ];
   const [isExpenseModalVisible, setIsExpenseModalVisible] = useState(false);
   const [isIncomeModalVisible, setIsIncomeModalVisible] = useState(false);
+  const [isBudgetModalVisible, setIsBudgetModalVisible] = useState(false);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentBalance, setCurrentBalance] = useState(0);
   const [income, setIncome] = useState(0);
   const [expenses, setExpenses] = useState(0);
+  const [budget, setBudget] = useState(0);
+  const [isBudgetExceeded, setIsBudgetExceeded] = useState(false);
 
   const navigate = useNavigate();
 
@@ -108,6 +89,18 @@ const Dashboard = () => {
     setIsIncomeModalVisible(false);
   };
 
+  const handleBudgetCancel = () => {
+    setIsBudgetModalVisible(false);
+  };
+
+  const handleBudgetSubmit = (values) => {
+    const budgetAmount = parseFloat(values.budget);
+    setBudget(parseFloat(values.budget));
+    setIsBudgetModalVisible(false);
+    console.log("Budget set to:", budgetAmount);
+    toast.success("Budget Set!");
+  };
+
   useEffect(() => {
     fetchTransactions();
   }, []);
@@ -143,12 +136,20 @@ const Dashboard = () => {
     setIncome(incomeTotal);
     setExpenses(expensesTotal);
     setCurrentBalance(incomeTotal - expensesTotal);
+
+    // Check if the expenses exceed the budget
+    if (expensesTotal > budget) {
+      setIsBudgetExceeded(true);
+      toast.warn("Warning: You have exceeded your budget!");
+    } else {
+      setIsBudgetExceeded(false);
+    }
   };
 
   // Calculate the initial balance, income, and expenses
   useEffect(() => {
     calculateBalance();
-  }, [transactions]);
+  }, [transactions, budget]);
 
   async function addTransaction(transaction, many) {
     try {
@@ -175,7 +176,6 @@ const Dashboard = () => {
       const querySnapshot = await getDocs(q);
       let transactionsArray = [];
       querySnapshot.forEach((doc) => {
-        // doc.data() is never undefined for query doc snapshots
         transactionsArray.push(doc.data());
       });
       setTransactions(transactionsArray);
@@ -199,6 +199,7 @@ const Dashboard = () => {
   function reset() {
     console.log("resetting");
   }
+
   const cardStyle = {
     boxShadow: "0px 0px 30px 8px rgba(227, 227, 227, 0.75)",
     margin: "2rem",
@@ -228,16 +229,25 @@ const Dashboard = () => {
         <Loader />
       ) : (
         <>
+          {/* <Button type="primary" onClick={() => setIsBudgetModalVisible(true)}>
+            Create Budget
+          </Button> */}
           <Cards
             currentBalance={currentBalance}
             income={income}
             expenses={expenses}
+            budget= {budget}
             showExpenseModal={showExpenseModal}
-            showIncomeModal={showIncomeModal}
+            showIncomeModal={showIncomeModal} 
+            showBudgetModal={() => setIsBudgetModalVisible(true)} // Pass the handler
             cardStyle={cardStyle}
             reset={reset}
           />
-
+          {isBudgetExceeded && (
+            <div style={{ color: 'red', fontSize: '24px', fontWeight: 'bold' }}>
+              Warning: You have exceeded your budget!
+            </div>
+          )}
           <AddExpenseModal
             isExpenseModalVisible={isExpenseModalVisible}
             handleExpenseCancel={handleExpenseCancel}
@@ -247,6 +257,11 @@ const Dashboard = () => {
             isIncomeModalVisible={isIncomeModalVisible}
             handleIncomeCancel={handleIncomeCancel}
             onFinish={onFinish}
+          />
+          <CreateBudgetModal
+            isBudgetModalVisible={isBudgetModalVisible}
+            handleBudgetCancel={handleBudgetCancel}
+            onBudgetSubmit={handleBudgetSubmit}
           />
           {transactions.length === 0 ? (
             <NoTransactions />
